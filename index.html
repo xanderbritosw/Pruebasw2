@@ -855,14 +855,11 @@ function guardarProgresoFirebase() {
     historialRetiros
   });
   console.log("✅ Progreso guardado en Firebase");
-}
 function cargarProgresoFirebase() {
   db.ref("usuarios/" + telegram_id).once("value").then(snapshot => {
     const obj = snapshot.val();
-
     if (!obj) {
       console.log("📁 No hay datos previos, iniciando nuevo");
-
       coins = 0;
       keys = 0;
       plants = JSON.parse(JSON.stringify(PLANTS_DEFAULT));

@@ -1470,5 +1470,23 @@ window.onload = function () {
 
 });
 </script>
+  <!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDoEwGkNnjJY6kIvISs1zgiDgU3MCrkZno",
+    authDomain: "xanfarm-web.firebaseapp.com",
+    databaseURL: "https://xanfarm-web-default-rtdb.firebaseio.com",
+    projectId: "xanfarm-web",
+    storageBucket: "xanfarm-web.appspot.com",
+    messagingSenderId: "703765140128",
+    appId: "1:703765140128:web:58f1816df69936bc28efc5"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+</script>
+
 </body>
 </html>

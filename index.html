@@ -1153,105 +1153,131 @@ function cargarProgresoFirebase() {
     else if(tipo === 'oro') modalCofre.classList.add('cofre-fondo-oro');
     else if(tipo === 'diamante') modalCofre.classList.add('cofre-fondo-diamante');
     // === FIN — FONDO COFRE PERSONALIZADO ===
+function actualizarCofreUI(tipo) {
+  const modalCofre = document.querySelector("#cofreModal .modal-content");
+  modalCofre.classList.remove('cofre-fondo-plata','cofre-fondo-oro','cofre-fondo-diamante');
+  if (tipo === 'plata') modalCofre.classList.add('cofre-fondo-plata');
+  else if (tipo === 'oro') modalCofre.classList.add('cofre-fondo-oro');
+  else if (tipo === 'diamante') modalCofre.classList.add('cofre-fondo-diamante');
 
-     cofre = cofres[tipo];
-    document.getElementById("tituloCofre").innerText = `🎁 Cofre ${cofre.nombre}`;
-    document.getElementById("imgCofre").src = cofre.img;
-    document.getElementById("llavesNecesarias").innerText = cofre.llaves;
-    let gratis = cofresGratisDisponibles(tipo);
-    let infoExtra = gratis > 0 ? `<div style="color:#24c24c;font-weight:bold;">Te quedan ${gratis} cofres gratis para abrir</div>` : "";
-    document.getElementById("cofreInfo").innerHTML = `
-      Necesitas <span id="llavesNecesarias">${cofre.llaves}</span> llaves para abrir este cofre.<br>
-      <span class="cofre-keys">Tienes: <span id="userKeys">${keys}</span> llaves</span>
-      ${infoExtra}
-    `;
-    document.getElementById("abrirCofreBtn").innerText = cofre.btnTexto;
-    document.getElementById("abrirCofreBtn").disabled = (keys < cofre.llaves && gratis === 0);
-    document.getElementById("resultadoCofre").innerHTML = "";
-  }
-  function seleccionarTipoCofre(tipo) {
-    tipoCofreSeleccionado = tipo;
-    document.querySelectorAll("#cofreModal .tab-selector button").forEach(b => b.classList.remove('active'));
-    document.getElementById("tab" + tipo.charAt(0).toUpperCase() + tipo.slice(1)).classList.add("active");
-    actualizarCofreUI(tipo);
-  }
-  document.getElementById("botonCofre").addEventListener("click", () => {
-    document.getElementById("cofreModal").style.display = "flex";
-    seleccionarTipoCofre("plata");
-    actualizarLlaves();
-  });
-  document.getElementById("cerrarCofreBtn").addEventListener("click", () => document.getElementById("cofreModal").style.display = "none");
-  document.getElementById("cerrarCofreBtn2").addEventListener("click", () => document.getElementById("cofreModal").style.display = "none");
-  document.getElementById("tabPlata").addEventListener("click", () => seleccionarTipoCofre("plata"));
-  document.getElementById("tabOro").addEventListener("click", () => seleccionarTipoCofre("oro"));
-  document.getElementById("tabDiamante").addEventListener("click", () => seleccionarTipoCofre("diamante"));
+  const cofre = cofres[tipo];
+  document.getElementById("tituloCofre").innerText = `🎁 Cofre ${cofre.nombre}`;
+  document.getElementById("imgCofre").src = cofre.img;
+  document.getElementById("llavesNecesarias").innerText = cofre.llaves;
+  const gratis = cofresGratisDisponibles(tipo);
+  const infoExtra = gratis > 0
+    ? `<div style="color:#24c24c;font-weight:bold;">Te quedan ${gratis} cofres gratis para abrir</div>`
+    : "";
+  document.getElementById("cofreInfo").innerHTML = `
+    Necesitas <span id="llavesNecesarias">${cofre.llaves}</span> llaves para abrir este cofre.<br>
+    <span class="cofre-keys">Tienes: <span id="userKeys">${keys}</span> llaves</span>
+    ${infoExtra}
+  `;
+  document.getElementById("abrirCofreBtn").innerText = cofre.btnTexto;
+  document.getElementById("abrirCofreBtn").disabled = (keys < cofre.llaves && gratis === 0);
+  document.getElementById("resultadoCofre").innerHTML = "";
+}
 
-  function cofresGratisDisponibles(tipo) {
-    if (tipo === "plata") return cofresGratis.plata;
-    if (tipo === "oro") return cofresGratis.oro;
-    return 0;
-  }
-  document.getElementById("abrirCofreBtn").addEventListener("click", () => {
-     tipo = tipoCofreSeleccionado;
-     cofre = cofres[tipo];
-    let gratis = cofresGratisDisponibles(tipo);
-    if (gratis > 0) {
-      cofresGratis[tipo]--;
-      abrirCofre(tipo, true);
-    } else if (keys >= cofre.llaves) {
-      keys -= cofre.llaves;
-      abrirCofre(tipo, false);
-    }
-    guardarProgresoFirebase();
-    actualizarLlaves();
-    actualizarCofreUI(tipo);
-  });
+function seleccionarTipoCofre(tipo) {
+  tipoCofreSeleccionado = tipo;
+  document.querySelectorAll("#cofreModal .tab-selector button").forEach(b => b.classList.remove('active'));
+  document.getElementById("tab" + tipo.charAt(0).toUpperCase() + tipo.slice(1)).classList.add("active");
+  actualizarCofreUI(tipo);
+}
 
-  function abrirCofre(tipo, esGratis) {
-     imgCofre = document.getElementById("imgCofre");
-    imgCofre.classList.add("abierto");
-    setTimeout(() => {
-      imgCofre.classList.remove("abierto");
-       resultado = calcularCofre(tipo);
-      mostrarResultadoCofre(resultado);
-      guardarProgresoFirebase();
-    }, 700);
+document.getElementById("botonCofre").addEventListener("click", () => {
+  document.getElementById("cofreModal").style.display = "flex";
+  seleccionarTipoCofre("plata");
+  actualizarLlaves();
+});
+
+document.getElementById("cerrarCofreBtn").addEventListener("click", () => {
+  document.getElementById("cofreModal").style.display = "none";
+});
+document.getElementById("cerrarCofreBtn2").addEventListener("click", () => {
+  document.getElementById("cofreModal").style.display = "none";
+});
+document.getElementById("tabPlata").addEventListener("click", () => seleccionarTipoCofre("plata"));
+document.getElementById("tabOro").addEventListener("click", () => seleccionarTipoCofre("oro"));
+document.getElementById("tabDiamante").addEventListener("click", () => seleccionarTipoCofre("diamante"));
+
+function cofresGratisDisponibles(tipo) {
+  if (tipo === "plata") return cofresGratis.plata;
+  if (tipo === "oro") return cofresGratis.oro;
+  return 0;
+}
+
+document.getElementById("abrirCofreBtn").addEventListener("click", () => {
+  const tipo = tipoCofreSeleccionado;
+  const cofre = cofres[tipo];
+  const gratis = cofresGratisDisponibles(tipo);
+  if (gratis > 0) {
+    cofresGratis[tipo]--;
+    abrirCofre(tipo, true);
+  } else if (keys >= cofre.llaves) {
+    keys -= cofre.llaves;
+    abrirCofre(tipo, false);
   }
-  function calcularCofre(tipo) {
-     tabla = probabilidades[tipo];
-     random = Math.random() * 100;
-    let acumulado = 0;
-    let rarezaElegida = "Común";
-    for ( p of tabla) {
-      acumulado += p.prob;
-      if (random <= acumulado) {
-        rarezaElegida = p.rareza;
-        break;
-      }
+  guardarProgresoFirebase();
+  actualizarLlaves();
+  actualizarCofreUI(tipo);
+});
+
+function abrirCofre(tipo, esGratis) {
+  const imgCofre = document.getElementById("imgCofre");
+  imgCofre.classList.add("abierto");
+  setTimeout(() => {
+    imgCofre.classList.remove("abierto");
+    const plantaGanada = calcularCofre(tipo);
+    mostrarResultadoCofre(plantaGanada);
+  }, 700);
+}
+
+function calcularCofre(tipo) {
+  const tabla = probabilidades[tipo];
+  const random = Math.random() * 100;
+  let acumulado = 0;
+  let rarezaElegida = "Común";
+  for (const p of tabla) {
+    acumulado += p.prob;
+    if (random <= acumulado) {
+      rarezaElegida = p.rareza;
+      break;
     }
-    let posibles = plants.filter(p => p.rareza === rarezaElegida);
-    if (rarezaElegida === "Legendaria") {
-      posibles = [...posibles, ...posibles.filter(p=>p.nombre === "Piña dorada")];
-    }
-     planta = posibles[Math.floor(Math.random() * posibles.length)];
-    return planta;
   }
-  function mostrarResultadoCofre(planta) {
-     resultado = document.getElementById("resultadoCofre");
-    resultado.innerHTML = `
-      <div style="display:flex; flex-direction:column; align-items:center;">
-        <img src="${planta.img}" alt="${planta.nombre}" style="width:90px; margin:12px 0; border-radius:12px;box-shadow:0 2px 12px #ffe66d99;">
-        <div style="font-size:1.15em; font-weight:bold; color:#3777ca;">
-          ¡Felicitaciones! Obtuviste<br>${planta.nombre}
-        </div>
+  let posibles = plants.filter(p => p.rareza === rarezaElegida);
+  if (rarezaElegida === "Legendaria") {
+    posibles = [...posibles, ...posibles.filter(p => p.nombre === "Piña dorada")];
+  }
+  return posibles[Math.floor(Math.random() * posibles.length)];
+}
+
+function mostrarResultadoCofre(planta) {
+  const resultado = document.getElementById("resultadoCofre");
+  resultado.innerHTML = `
+    <div style="display:flex; flex-direction:column; align-items:center;">
+      <img src="${planta.img}" alt="${planta.nombre}" style="width:90px; margin:12px 0; border-radius:12px;box-shadow:0 2px 12px #ffe66d99;">
+      <div style="font-size:1.15em; font-weight:bold; color:#3777ca;">
+        ¡Felicitaciones! Obtuviste<br>${planta.nombre}
       </div>
-    `;
-     encontrada = plants.find(p => p.nombre === planta.nombre);
-    if (encontrada) encontrada.cantidad++;
-    guardarProgresoFirebase();
-    mostrarInventario();
+    </div>
+  `;
+  const encontrada = plants.find(p => p.nombre === planta.nombre);
+  if (encontrada) {
+    encontrada.cantidad++;
+  } else {
+    plants.push({
+      nombre: planta.nombre,
+      cantidad: 1,
+      valor: planta.valor,
+      rareza: planta.rareza,
+      img: planta.img
+    });
   }
-
+  mostrarPlantas?.();
+  mostrarInventario?.();
+  guardarProgresoFirebase();
+}
   // ----------- INVENTARIO -----------
   function mostrarInventario() {
      lista = document.getElementById("plantList");
@@ -1275,7 +1301,6 @@ function cargarProgresoFirebase() {
       lista.innerHTML = `<div style="color:#888;font-size:1.1em;margin:20px 0;">Aún no tienes cultivos.<br>¡Abre cofres para empezar!</div>`;
     }
   }
-
   // ----------- PERFIL Y RANGO -----------
   function getRango(produccionDia) {
     if (produccionDia >= 1000) return "Minero Excepcional";

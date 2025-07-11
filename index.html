@@ -653,7 +653,6 @@
       Recolectar producción
     </button>
   </div>
-
   <div class="menu">
     <button id="botonPerfil">🧑‍💻 Perfil</button>
     <button id="botonInventario">🎒 Inventario</button>
@@ -819,49 +818,55 @@ let lastRecolectado = Date.now();
 let monedasGF = 0;
 let historialRetiros = [];
 
-// 💾 Guardar progreso
-function guardarProgreso() {
-  localStorage.setItem("xanfarm-progreso", JSON.stringify({
+// 💾 Guardar progreso en Firebase
+function guardarProgresoFirebase() {
+  db.ref("usuarios/" + telegram_id).set({
     coins,
     keys,
     plants,
     cofresGratis,
     lastRecolectado,
-    monedasGF
-  }));
-  localStorage.setItem("xanfarm-retiros", JSON.stringify(historialRetiros));
-  console.log("✅ Progreso guardado");
+    monedasGF,
+    historialRetiros
+  });
+  console.log("✅ Progreso guardado en Firebase");
 }
 
-// 📦 Cargar progreso
-function cargarProgreso() {
-  const data = localStorage.getItem("xanfarm-progreso");
-  if (!data) return false;
-  try {
-    const obj = JSON.parse(data);
+// 📦 Cargar progreso desde Firebase
+function cargarProgresoFirebase() {
+  db.ref("usuarios/" + telegram_id).once("value").then(snapshot => {
+    const obj = snapshot.val();
+    if (!obj) {
+      console.log("📁 No hay datos previos, iniciando nuevo");
+      guardarProgresoFirebase(); // crear entrada nueva
+      return;
+    }
+
     coins = obj.coins ?? 0;
     keys = obj.keys ?? 0;
     plants = obj.plants ?? [];
     cofresGratis = obj.cofresGratis ?? { oro: 0, plata: 0 };
     lastRecolectado = obj.lastRecolectado ?? Date.now();
     monedasGF = obj.monedasGF ?? 0;
-    historialRetiros = JSON.parse(localStorage.getItem("xanfarm-retiros")) || [];
-    console.log("✅ Progreso cargado");
-    return true;
-  } catch {
-    console.error("❌ Error al cargar progreso");
-    return false;
-  }
+    historialRetiros = obj.historialRetiros ?? [];
+
+    actualizarMonedas?.();
+    actualizarLlaves?.();
+    mostrarPlantas?.();
+
+    console.log("✅ Progreso cargado desde Firebase");
+  });
+}
 }
 
 // 🕓 Ejecutar carga automática al iniciar
 window.addEventListener("load", () => {
-  const cargado = cargarProgreso();
-  if (!cargado) guardarProgreso(); // iniciar nuevo si no hay datos
+  const cargado = cargarProgresoFirebase();
+  if (!cargado) guardarProgresoFirebase(); // iniciar nuevo si no hay datos
 });
 
 // 🧪 Ejemplo: guardar cada 30 segundos automáticamente
-setInterval(guardarProgreso, 30000);
+setInterval(guardarProgresoFirebase, 30000);
 
 // Mostrar Balance
 document.getElementById("botonBalance").onclick = () => {
@@ -893,14 +898,14 @@ document.getElementById("convertirAGFBtn").onclick = () => {
   }
   coins -= 100;
   monedasGF += 1;
-  guardarProgreso();
+  guardarProgresoFirebase();
   document.getElementById("retiroMonedas").innerText = coins;
   document.getElementById("retiroGF").innerText = monedasGF;
   actualizarMonedas();
   document.getElementById("retiroMensaje").innerText = "¡Conversión exitosa!";
 };
 
-// Solicitar retiro
+// 🏦 Solicitar retiro
 document.getElementById("pedirRetiroBtn").onclick = () => {
   if (monedasGF < 100) {
     document.getElementById("retiroMensaje").innerText =
@@ -909,14 +914,14 @@ document.getElementById("pedirRetiroBtn").onclick = () => {
   }
   monedasGF -= 100;
   const retiro = registrarRetiro(100);
-  guardarProgreso();
+  guardarProgresoFirebase(); // ✅ Guardar online
   document.getElementById("retiroGF").innerText = monedasGF;
   renderizarHistorialRetiros();
   document.getElementById("retiroMensaje").innerText =
     `¡Solicitud enviada! Tu ID de retiro es ${retiro.id}. Contácta al admin para recibir tu pago.`;
 };
 
-// Registrar retiro
+// 📑 Registrar retiro en historial
 function registrarRetiro(gfCantidad) {
   const id =
     "RET-" +
@@ -930,11 +935,10 @@ function registrarRetiro(gfCantidad) {
     estado: "pendiente",
   };
   historialRetiros.push(retiro);
-  localStorage.setItem("xanfarm-retiros", JSON.stringify(historialRetiros));
   return retiro;
 }
 
-// Renderizar tabla de historial de retiros
+// 📋 Renderizar tabla de historial
 function renderizarHistorialRetiros() {
   const tbody = document.getElementById("tablaHistorialRetiros").querySelector("tbody");
   tbody.innerHTML = "";
@@ -957,36 +961,74 @@ function renderizarHistorialRetiros() {
       });
   }
 }
+
+// ✅ Marcar retiro como pagado
 function marcarRetiroComoPagado(id) {
   const retiro = historialRetiros.find((r) => r.id === id);
   if (retiro) {
     retiro.estado = "pagado";
-    guardarProgreso();
+    guardarProgresoFirebase(); // ✅ Guardar online
     renderizarHistorialRetiros();
     alert("Retiro marcado como pagado.");
   }
 }
 // No olvides llamar cargarProgreso() al iniciar
 window.onload = function () {
-  cargarProgreso();
+  cargarProgresoFirebase();
   actualizarMonedas(); // si ya tienes esta función para actualizar la UI
 };
-  // ---------- BONO DE BIENVENIDA ----------
-  let yaRecibioBono = localStorage.getItem("xanfarm-yaRecibioBono") === "1";
-  if (!cargarProgreso()) {
-    coins = 0;
-    keys = 0;
-    plants = JSON.parse(JSON.stringify(PLANTS_DEFAULT));
-    plants.forEach(p => p.cantidad = 0);
-    cofresGratis = { oro: 1, plata: 3 };
-    lastRecolectado = Date.now();
-    guardarProgreso();
-  }
-  if (!yaRecibioBono) {
-    cofresGratis = { oro: 1, plata: 3 };
-    localStorage.setItem("xanfarm-yaRecibioBono", "1");
-    guardarProgreso();
-  }
+// ---------- BONO DE BIENVENIDA ----------
+// Ejecutar carga automática al iniciar
+window.onload = function () {
+  cargarProgresoFirebase(); // ✅ carga desde Firebase
+};
+
+// Variable global
+let yaRecibioBono = false;
+
+// Dentro de cargarProgresoFirebase, agregá esto después de cargar datos
+function cargarProgresoFirebase() {
+  db.ref("usuarios/" + telegram_id).once("value").then(snapshot => {
+    const obj = snapshot.val();
+    if (!obj) {
+      // No hay datos previos: inicializamos
+      coins = 0;
+      keys = 0;
+      plants = JSON.parse(JSON.stringify(PLANTS_DEFAULT));
+      plants.forEach(p => p.cantidad = 0);
+      cofresGratis = { oro: 1, plata: 3 };
+      lastRecolectado = Date.now();
+      monedasGF = 0;
+      historialRetiros = [];
+      yaRecibioBono = false;
+      guardarProgresoFirebase();
+      console.log("📁 Nuevo jugador, progreso inicializado");
+    } else {
+      // Datos encontrados
+      coins = obj.coins ?? 0;
+      keys = obj.keys ?? 0;
+      plants = obj.plants ?? [];
+      cofresGratis = obj.cofresGratis ?? { oro: 0, plata: 0 };
+      lastRecolectado = obj.lastRecolectado ?? Date.now();
+      monedasGF = obj.monedasGF ?? 0;
+      historialRetiros = obj.historialRetiros ?? [];
+      yaRecibioBono = obj.yaRecibioBono ?? false;
+      console.log("✅ Progreso cargado desde Firebase");
+    }
+
+    // 🎁 Bono de bienvenida si nunca lo recibió
+    if (!yaRecibioBono) {
+      cofresGratis = { oro: 1, plata: 3 };
+      yaRecibioBono = true;
+      guardarProgresoFirebase();
+      console.log("🎉 Bono de bienvenida entregado");
+    }
+
+    actualizarMonedas?.();
+    actualizarLlaves?.();
+    mostrarPlantas?.();
+  });
+}
 
   // ----------- SISTEMA DE PRODUCCIÓN AUTOMÁTICA -----------
   const periodoRecolecta = 12 * 60 * 60 * 1000; // 12 horas
@@ -1033,7 +1075,7 @@ window.onload = function () {
     monedasRecoleccion = Math.floor(monedasRecoleccion);
     coins += monedasRecoleccion;
     lastRecolectado = ahora;
-    guardarProgreso();
+    guardarProgresoFirebase();
     actualizarMonedas();
     actualizarBarraProduccion();
     animarRecoleccion(monedasRecoleccion);
@@ -1116,7 +1158,7 @@ window.onload = function () {
       keys -= cofre.llaves;
       abrirCofre(tipo, false);
     }
-    guardarProgreso();
+    guardarProgresoFirebase();
     actualizarLlaves();
     actualizarCofreUI(tipo);
   });
@@ -1128,7 +1170,7 @@ window.onload = function () {
       imgCofre.classList.remove("abierto");
       const resultado = calcularCofre(tipo);
       mostrarResultadoCofre(resultado);
-      guardarProgreso();
+      guardarProgresoFirebase();
     }, 700);
   }
   function calcularCofre(tipo) {
@@ -1162,7 +1204,7 @@ window.onload = function () {
     `;
     const encontrada = plants.find(p => p.nombre === planta.nombre);
     if (encontrada) encontrada.cantidad++;
-    guardarProgreso();
+    guardarProgresoFirebase();
     mostrarInventario();
   }
 
@@ -1295,7 +1337,7 @@ window.onload = function () {
     if (m && !m.completada && m.progreso >= m.requerimiento) {
       m.completada = true;
       coins += m.recompensa.monedas;
-      guardarProgreso();
+      guardarProgresoFirebase();
       actualizarMonedas();
       mostrarMisiones(tipo);
       alert(`¡Misión completada! Ganaste ${m.recompensa.monedas} monedas 🎉`);
@@ -1306,13 +1348,13 @@ window.onload = function () {
   function actualizarMonedas() {
     document.getElementById("coins").innerText = coins;
     document.getElementById("perfilCoins") && (document.getElementById("perfilCoins").innerText = coins);
-    guardarProgreso();
+    guardarProgresoFirebase();
   }
   function actualizarLlaves() {
     document.getElementById("keys").innerText = keys;
     document.getElementById("userKeys") && (document.getElementById("userKeys").innerText = keys);
     document.getElementById("perfilKeys") && (document.getElementById("perfilKeys").innerText = keys);
-    guardarProgreso();
+    guardarProgresoFirebase();
   }
   actualizarMonedas();
   actualizarLlaves();
@@ -1487,5 +1529,6 @@ window.onload = function () {
 
   firebase.initializeApp(firebaseConfig);
 </script>
+
 </body>
 </html>

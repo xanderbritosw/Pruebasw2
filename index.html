@@ -793,700 +793,353 @@
     </div>
   </div>
   <script>
-document.addEventListener("DOMContentLoaded", () => {
-  // ---------- DATOS POR DEFECTO ----------
-  const PLANTS_DEFAULT = [
-    { nombre: "Piña dorada", valor: 500, cantidad: 0, rareza: "Legendaria", img: "https://i.imgur.com/4LLQVZR.png" },
-    { nombre: "Uva eléctrica", valor: 350, cantidad: 0, rareza: "Legendaria", img: "https://i.imgur.com/3kY9HG7.png" },
-    { nombre: "Cereza de lava", valor: 350, cantidad: 0, rareza: "Legendaria", img: "https://i.imgur.com/nlhsGu0.png" },
-    { nombre: "Flor de cacao", valor: 180, cantidad: 0, rareza: "Épica", img: "https://i.imgur.com/DmtOhmA.png" },
-    { nombre: "Melón ámbar", valor: 180, cantidad: 0, rareza: "Épica", img: "https://i.imgur.com/ZwC4Kde.png" },
-    { nombre: "Frijol lunar", valor: 70, cantidad: 0, rareza: "Rara", img: "https://i.imgur.com/DHMhAut.png" },
-    { nombre: "Zanahoria cristal", valor: 70, cantidad: 0, rareza: "Rara", img: "https://i.imgur.com/PqYvGOs.png" },
-    { nombre: "Choclo místico", valor: 70, cantidad: 0, rareza: "Rara", img: "https://i.imgur.com/tlQeAup.png" },
-    { nombre: "Maíz dulce", valor: 30, cantidad: 0, rareza: "Común", img: "https://i.imgur.com/o6yWfY0.png" },
-    { nombre: "Tomate solar", valor: 30, cantidad: 0, rareza: "Común", img: "https://i.imgur.com/QdRLusf.png" },
-    { nombre: "Trigo solar", valor: 30, cantidad: 0, rareza: "Común", img: "https://i.imgur.com/8U8tirk.png" }
-  ];
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script>
+    // --- Configuración Firebase ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyDoEwGkNnjJY6kIvISs1zgiDgU3MCrkZno",
+      authDomain: "xanfarm-web.firebaseapp.com",
+      databaseURL: "https://xanfarm-web-default-rtdb.firebaseio.com",
+      projectId: "xanfarm-web",
+      storageBucket: "xanfarm-web.appspot.com",
+      messagingSenderId: "703765140128",
+      appId: "1:703765140128:web:58f1816df69936bc28efc5"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  // ---------- CARGA Y GUARDADO ----------
-  // 🧠 Variables globales necesarias
-let coins = 0;
-let keys = 0;
-let plants = [];
-let cofresGratis = { oro: 0, plata: 0 };
-let lastRecolectado = Date.now();
-let monedasGF = 0;
-let historialRetiros = [];
+    // --- Obtener Telegram ID de la URL ---
+    function getTelegramId() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('telegram_id') || 'noid';
+    }
+    const telegramId = getTelegramId();
 
-// 💾 Guardar progreso
-function guardarProgreso() {
-  localStorage.setItem("xanfarm-progreso", JSON.stringify({
-    coins,
-    keys,
-    plants,
-    cofresGratis,
-    lastRecolectado,
-    monedasGF
-  }));
-  localStorage.setItem("xanfarm-retiros", JSON.stringify(historialRetiros));
-  console.log("✅ Progreso guardado");
-}
+    // ---------- DATOS POR DEFECTO ----------
+    const PLANTS_DEFAULT = [
+      { nombre: "Piña dorada", valor: 500, cantidad: 0, rareza: "Legendaria", img: "https://i.imgur.com/4LLQVZR.png" },
+      { nombre: "Uva eléctrica", valor: 350, cantidad: 0, rareza: "Legendaria", img: "https://i.imgur.com/3kY9HG7.png" },
+      { nombre: "Cereza de lava", valor: 350, cantidad: 0, rareza: "Legendaria", img: "https://i.imgur.com/nlhsGu0.png" },
+      { nombre: "Flor de cacao", valor: 180, cantidad: 0, rareza: "Épica", img: "https://i.imgur.com/DmtOhmA.png" },
+      { nombre: "Melón ámbar", valor: 180, cantidad: 0, rareza: "Épica", img: "https://i.imgur.com/ZwC4Kde.png" },
+      { nombre: "Frijol lunar", valor: 70, cantidad: 0, rareza: "Rara", img: "https://i.imgur.com/DHMhAut.png" },
+      { nombre: "Zanahoria cristal", valor: 70, cantidad: 0, rareza: "Rara", img: "https://i.imgur.com/PqYvGOs.png" },
+      { nombre: "Choclo místico", valor: 70, cantidad: 0, rareza: "Rara", img: "https://i.imgur.com/tlQeAup.png" },
+      { nombre: "Maíz dulce", valor: 30, cantidad: 0, rareza: "Común", img: "https://i.imgur.com/o6yWfY0.png" },
+      { nombre: "Tomate solar", valor: 30, cantidad: 0, rareza: "Común", img: "https://i.imgur.com/QdRLusf.png" },
+      { nombre: "Trigo solar", valor: 30, cantidad: 0, rareza: "Común", img: "https://i.imgur.com/8U8tirk.png" }
+    ];
 
-// 📦 Cargar progreso
-function cargarProgreso() {
-  const data = localStorage.getItem("xanfarm-progreso");
-  if (!data) return false;
-  try {
-    const obj = JSON.parse(data);
-    coins = obj.coins ?? 0;
-    keys = obj.keys ?? 0;
-    plants = obj.plants ?? [];
-    cofresGratis = obj.cofresGratis ?? { oro: 0, plata: 0 };
-    lastRecolectado = obj.lastRecolectado ?? Date.now();
-    monedasGF = obj.monedasGF ?? 0;
-    historialRetiros = JSON.parse(localStorage.getItem("xanfarm-retiros")) || [];
-    console.log("✅ Progreso cargado");
-    return true;
-  } catch {
-    console.error("❌ Error al cargar progreso");
-    return false;
-  }
-}
+    // ---------- VARIABLES GLOBALES ----------
+    let coins = 0;
+    let keys = 0;
+    let plants = [];
+    let cofresGratis = { oro: 0, plata: 0 };
+    let lastRecolectado = Date.now();
+    let monedasGF = 0;
+    let historialRetiros = [];
 
-// 🕓 Ejecutar carga automática al iniciar
-window.addEventListener("load", () => {
-  const cargado = cargarProgreso();
-  if (!cargado) guardarProgreso(); // iniciar nuevo si no hay datos
-});
-
-// 🧪 Ejemplo: guardar cada 30 segundos automáticamente
-setInterval(guardarProgreso, 30000);
-
-// Mostrar Balance
-document.getElementById("botonBalance").onclick = () => {
-  document.getElementById("balMonedas").innerText = coins;
-  document.getElementById("balGF").innerText = monedasGF;
-  document.getElementById("balKeys").innerText = keys;
-  document.getElementById("balanceModal").style.display = "flex";
-};
-document.getElementById("cerrarBalanceBtn").onclick = () =>
-  document.getElementById("balanceModal").style.display = "none";
-
-// Abrir Retiros
-document.getElementById("retirosBtn").onclick = () => {
-  document.getElementById("retiroMonedas").innerText = coins;
-  document.getElementById("retiroGF").innerText = monedasGF;
-  document.getElementById("retiroMensaje").innerText = "";
-  renderizarHistorialRetiros();
-  document.getElementById("retirosModal").style.display = "flex";
-};
-document.getElementById("cerrarRetirosBtn").onclick = () =>
-  document.getElementById("retirosModal").style.display = "none";
-
-// Conversión monedas → GF
-document.getElementById("convertirAGFBtn").onclick = () => {
-  if (coins < 100) {
-    document.getElementById("retiroMensaje").innerText =
-      "No tienes suficientes monedas normales para convertir.";
-    return;
-  }
-  coins -= 100;
-  monedasGF += 1;
-  guardarProgreso();
-  document.getElementById("retiroMonedas").innerText = coins;
-  document.getElementById("retiroGF").innerText = monedasGF;
-  actualizarMonedas();
-  document.getElementById("retiroMensaje").innerText = "¡Conversión exitosa!";
-};
-
-// Solicitar retiro
-document.getElementById("pedirRetiroBtn").onclick = () => {
-  if (monedasGF < 100) {
-    document.getElementById("retiroMensaje").innerText =
-      "El mínimo de retiro es 100 GF.";
-    return;
-  }
-  monedasGF -= 100;
-  const retiro = registrarRetiro(100);
-  guardarProgreso();
-  document.getElementById("retiroGF").innerText = monedasGF;
-  renderizarHistorialRetiros();
-  document.getElementById("retiroMensaje").innerText =
-    `¡Solicitud enviada! Tu ID de retiro es ${retiro.id}. Contácta al admin para recibir tu pago.`;
-};
-
-// Registrar retiro
-function registrarRetiro(gfCantidad) {
-  const id =
-    "RET-" +
-    Date.now().toString(36) +
-    "-" +
-    Math.floor(Math.random() * 10000).toString(36);
-  const retiro = {
-    id,
-    gf: gfCantidad,
-    fecha: new Date().toLocaleString(),
-    estado: "pendiente",
-  };
-  historialRetiros.push(retiro);
-  localStorage.setItem("xanfarm-retiros", JSON.stringify(historialRetiros));
-  return retiro;
-}
-
-// Renderizar tabla de historial de retiros
-function renderizarHistorialRetiros() {
-  const tbody = document.getElementById("tablaHistorialRetiros").querySelector("tbody");
-  tbody.innerHTML = "";
-  if (!historialRetiros.length) {
-    tbody.innerHTML =
-      "<tr><td colspan='4' style='color:#999'>Sin retiros realizados</td></tr>";
-  } else {
-    historialRetiros
-      .slice()
-      .reverse()
-      .forEach((r) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${r.id}</td>
-          <td>${r.gf}</td>
-          <td>${r.fecha}</td>
-          <td class="${r.estado}">${r.estado.charAt(0).toUpperCase() + r.estado.slice(1)}</td>
-        `;
-        tbody.appendChild(tr);
+    // ---------- FUNCIONES FIREBASE ----------
+    function guardarProgresoFirebase() {
+      db.ref('jugadores/' + telegramId).set({
+        coins, keys, plants, cofresGratis, lastRecolectado, monedasGF
       });
-  }
-}
-function marcarRetiroComoPagado(id) {
-  const retiro = historialRetiros.find((r) => r.id === id);
-  if (retiro) {
-    retiro.estado = "pagado";
-    guardarProgreso();
-    renderizarHistorialRetiros();
-    alert("Retiro marcado como pagado.");
-  }
-}
-// No olvides llamar cargarProgreso() al iniciar
-window.onload = function () {
-  cargarProgreso();
-  actualizarMonedas(); // si ya tienes esta función para actualizar la UI
-};
-  // ---------- BONO DE BIENVENIDA ----------
-  let yaRecibioBono = localStorage.getItem("xanfarm-yaRecibioBono") === "1";
-  if (!cargarProgreso()) {
-    coins = 0;
-    keys = 0;
-    plants = JSON.parse(JSON.stringify(PLANTS_DEFAULT));
-    plants.forEach(p => p.cantidad = 0);
-    cofresGratis = { oro: 1, plata: 3 };
-    lastRecolectado = Date.now();
-    guardarProgreso();
-  }
-  if (!yaRecibioBono) {
-    cofresGratis = { oro: 1, plata: 3 };
-    localStorage.setItem("xanfarm-yaRecibioBono", "1");
-    guardarProgreso();
-  }
-
-  // ----------- SISTEMA DE PRODUCCIÓN AUTOMÁTICA -----------
-  const periodoRecolecta = 12 * 60 * 60 * 1000; // 12 horas
-  function produccionPorMinuto() {
-    let total = 0;
-    plants.forEach(p => total += (p.valor * p.cantidad) / 1440);
-    return total;
-  }
-  function produccionPorDia() {
-    let total = 0;
-    plants.forEach(p => total += p.valor * p.cantidad);
-    return total;
-  }
-  function actualizarBarraProduccion() {
-    const ahora = Date.now();
-    const tiempoPasado = Math.max(0, ahora - lastRecolectado);
-    const progreso = Math.min(1, tiempoPasado / periodoRecolecta);
-    document.getElementById("barraProduccion").style.width = (progreso * 100) + "%";
-    let tiempoRestante = periodoRecolecta - tiempoPasado;
-    if (tiempoRestante < 0) tiempoRestante = 0;
-    document.getElementById("timerProduccion").innerText = msToHMS(tiempoRestante);
-    document.getElementById("btnRecolectar").disabled = progreso < 1 || produccionPorMinuto() === 0;
-  }
-  function msToHMS(ms) {
-    let total = Math.floor(ms / 1000);
-    const h = String(Math.floor(total / 3600)).padStart(2, "0");
-    total %= 3600;
-    const m = String(Math.floor(total / 60)).padStart(2, "0");
-    const s = String(total % 60).padStart(2, "0");
-    return `${h}:${m}:${s}`;
-  }
-  setInterval(actualizarBarraProduccion, 1000);
-  actualizarBarraProduccion();
-
-  document.getElementById("btnRecolectar").addEventListener("click", () => {
-    const ahora = Date.now();
-    let tiempoPasado = Math.max(0, ahora - lastRecolectado);
-    if (tiempoPasado > periodoRecolecta) tiempoPasado = periodoRecolecta;
-    const minutos = Math.floor(tiempoPasado / 60000);
-    let monedasRecoleccion = 0;
-    plants.forEach(p => {
-      monedasRecoleccion += (p.valor * p.cantidad) * (minutos / 1440);
-    });
-    monedasRecoleccion = Math.floor(monedasRecoleccion);
-    coins += monedasRecoleccion;
-    lastRecolectado = ahora;
-    guardarProgreso();
-    actualizarMonedas();
-    actualizarBarraProduccion();
-    animarRecoleccion(monedasRecoleccion);
-  });
-
-  function animarRecoleccion(monedas) {
-    const anim = document.getElementById("recoleccionAnimada");
-    anim.style.display = "block";
-    anim.innerHTML = `<img src="https://i.imgur.com/n9OyA2U.png" class="moneda-icon" style="width:40px;"><br>Felicidades<br>Obtuviste<br><b>${monedas}</b> de producción<br><small>¡Vuelve en 12 horas Granjero!</small>`;
-    setTimeout(() => { anim.style.display = "none"; }, 1500);
-  }
-
-  // ----------- Cofres -----------
-  const cofres = {
-    plata: { nombre: "Plata", img: "https://i.imgur.com/dYd1aoN.png", llaves: 10, btnTexto: "Abrir Cofre de Plata" },
-    oro: { nombre: "Oro", img: "https://i.imgur.com/HpkO9qJ.png", llaves: 50, btnTexto: "Abrir Cofre de Oro" },
-    diamante: { nombre: "Diamante", img: "https://i.imgur.com/HanPFOR.png", llaves: 100, btnTexto: "Abrir Cofre Diamante" }
-  };
-  let tipoCofreSeleccionado = "plata";
-  const probabilidades = {
-    plata: [ { rareza: "Legendaria", prob: 0.1 }, { rareza: "Épica", prob: 16 }, { rareza: "Rara", prob: 34 }, { rareza: "Común", prob: 49.9 } ],
-    oro: [ { rareza: "Legendaria", prob: 4 }, { rareza: "Épica", prob: 20 }, { rareza: "Rara", prob: 36 }, { rareza: "Común", prob: 40 } ],
-    diamante: [ { rareza: "Legendaria", prob: 8 }, { rareza: "Épica", prob: 32 }, { rareza: "Rara", prob: 32 }, { rareza: "Común", prob: 28 } ]
-  };
-
-  function actualizarCofreUI(tipo) {
-    // === FONDO COFRE PERSONALIZADO ===
-    const modalCofre = document.querySelector("#cofreModal .modal-content");
-    modalCofre.classList.remove('cofre-fondo-plata','cofre-fondo-oro','cofre-fondo-diamante');
-    if(tipo === 'plata') modalCofre.classList.add('cofre-fondo-plata');
-    else if(tipo === 'oro') modalCofre.classList.add('cofre-fondo-oro');
-    else if(tipo === 'diamante') modalCofre.classList.add('cofre-fondo-diamante');
-    // === FIN — FONDO COFRE PERSONALIZADO ===
-
-    const cofre = cofres[tipo];
-    document.getElementById("tituloCofre").innerText = `🎁 Cofre ${cofre.nombre}`;
-    document.getElementById("imgCofre").src = cofre.img;
-    document.getElementById("llavesNecesarias").innerText = cofre.llaves;
-    let gratis = cofresGratisDisponibles(tipo);
-    let infoExtra = gratis > 0 ? `<div style="color:#24c24c;font-weight:bold;">Te quedan ${gratis} cofres gratis para abrir</div>` : "";
-    document.getElementById("cofreInfo").innerHTML = `
-      Necesitas <span id="llavesNecesarias">${cofre.llaves}</span> llaves para abrir este cofre.<br>
-      <span class="cofre-keys">Tienes: <span id="userKeys">${keys}</span> llaves</span>
-      ${infoExtra}
-    `;
-    document.getElementById("abrirCofreBtn").innerText = cofre.btnTexto;
-    document.getElementById("abrirCofreBtn").disabled = (keys < cofre.llaves && gratis === 0);
-    document.getElementById("resultadoCofre").innerHTML = "";
-  }
-  function seleccionarTipoCofre(tipo) {
-    tipoCofreSeleccionado = tipo;
-    document.querySelectorAll("#cofreModal .tab-selector button").forEach(b => b.classList.remove('active'));
-    document.getElementById("tab" + tipo.charAt(0).toUpperCase() + tipo.slice(1)).classList.add("active");
-    actualizarCofreUI(tipo);
-  }
-  document.getElementById("botonCofre").addEventListener("click", () => {
-    document.getElementById("cofreModal").style.display = "flex";
-    seleccionarTipoCofre("plata");
-    actualizarLlaves();
-  });
-  document.getElementById("cerrarCofreBtn").addEventListener("click", () => document.getElementById("cofreModal").style.display = "none");
-  document.getElementById("cerrarCofreBtn2").addEventListener("click", () => document.getElementById("cofreModal").style.display = "none");
-  document.getElementById("tabPlata").addEventListener("click", () => seleccionarTipoCofre("plata"));
-  document.getElementById("tabOro").addEventListener("click", () => seleccionarTipoCofre("oro"));
-  document.getElementById("tabDiamante").addEventListener("click", () => seleccionarTipoCofre("diamante"));
-
-  function cofresGratisDisponibles(tipo) {
-    if (tipo === "plata") return cofresGratis.plata;
-    if (tipo === "oro") return cofresGratis.oro;
-    return 0;
-  }
-  document.getElementById("abrirCofreBtn").addEventListener("click", () => {
-    const tipo = tipoCofreSeleccionado;
-    const cofre = cofres[tipo];
-    let gratis = cofresGratisDisponibles(tipo);
-    if (gratis > 0) {
-      cofresGratis[tipo]--;
-      abrirCofre(tipo, true);
-    } else if (keys >= cofre.llaves) {
-      keys -= cofre.llaves;
-      abrirCofre(tipo, false);
+      db.ref('retiros/' + telegramId).set(historialRetiros);
     }
-    guardarProgreso();
-    actualizarLlaves();
-    actualizarCofreUI(tipo);
-  });
-
-  function abrirCofre(tipo, esGratis) {
-    const imgCofre = document.getElementById("imgCofre");
-    imgCofre.classList.add("abierto");
-    setTimeout(() => {
-      imgCofre.classList.remove("abierto");
-      const resultado = calcularCofre(tipo);
-      mostrarResultadoCofre(resultado);
-      guardarProgreso();
-    }, 700);
-  }
-  function calcularCofre(tipo) {
-    const tabla = probabilidades[tipo];
-    const random = Math.random() * 100;
-    let acumulado = 0;
-    let rarezaElegida = "Común";
-    for (const p of tabla) {
-      acumulado += p.prob;
-      if (random <= acumulado) {
-        rarezaElegida = p.rareza;
-        break;
-      }
-    }
-    let posibles = plants.filter(p => p.rareza === rarezaElegida);
-    if (rarezaElegida === "Legendaria") {
-      posibles = [...posibles, ...posibles.filter(p=>p.nombre === "Piña dorada")];
-    }
-    const planta = posibles[Math.floor(Math.random() * posibles.length)];
-    return planta;
-  }
-  function mostrarResultadoCofre(planta) {
-    const resultado = document.getElementById("resultadoCofre");
-    resultado.innerHTML = `
-      <div style="display:flex; flex-direction:column; align-items:center;">
-        <img src="${planta.img}" alt="${planta.nombre}" style="width:90px; margin:12px 0; border-radius:12px;box-shadow:0 2px 12px #ffe66d99;">
-        <div style="font-size:1.15em; font-weight:bold; color:#3777ca;">
-          ¡Felicitaciones! Obtuviste<br>${planta.nombre}
-        </div>
-      </div>
-    `;
-    const encontrada = plants.find(p => p.nombre === planta.nombre);
-    if (encontrada) encontrada.cantidad++;
-    guardarProgreso();
-    mostrarInventario();
-  }
-
-  // ----------- INVENTARIO -----------
-  function mostrarInventario() {
-    const lista = document.getElementById("plantList");
-    lista.innerHTML = "";
-    let totalProd = 0;
-    plants.forEach((planta) => {
-      totalProd += planta.valor * planta.cantidad;
-      lista.innerHTML += `
-      <div class="plant">
-        <img src="${planta.img}" alt="${planta.nombre}">
-        <div class="plant-info">
-          <b>${planta.nombre}</b> 
-          <span style="color:#9b51e0;">[${planta.rareza}]</span><br>
-          Cantidad: <b>${planta.cantidad}</b>
-          <span class="production">+${planta.valor * planta.cantidad} monedas/día</span>
-        </div>
-      </div>
-      `;
-    });
-    if (totalProd === 0) {
-      lista.innerHTML = `<div style="color:#888;font-size:1.1em;margin:20px 0;">Aún no tienes cultivos.<br>¡Abre cofres para empezar!</div>`;
-    }
-  }
-
-  // ----------- PERFIL Y RANGO -----------
-  function getRango(produccionDia) {
-    if (produccionDia >= 1000) return "Minero Excepcional";
-    if (produccionDia >= 600) return "Minero Gold";
-    if (produccionDia >= 300) return "Minero Experimentado";
-    if (produccionDia >= 100) return "Minero Plata";
-    return "Minero Principiante";
-  }
-
-  function actualizarPerfil() {
-    let prodDia = produccionPorDia();
-    document.getElementById("perfilRango").innerText = getRango(prodDia);
-    document.getElementById("perfilProduccion").innerText = prodDia;
-    document.getElementById("perfilCoins").innerText = coins;
-    document.getElementById("perfilKeys").innerText = keys;
-  }
-
-  // ----------- MODALES PERFIL, INVENTARIO, MISIONES -----------
-  document.getElementById("botonPerfil").addEventListener("click", () => {
-    actualizarPerfil();
-    document.getElementById("profileModal").style.display = "flex";
-  });
-  document.getElementById("cerrarPerfilBtn").addEventListener("click", () => document.getElementById("profileModal").style.display = "none");
-  document.getElementById("botonInventario").addEventListener("click", () => {
-    mostrarInventario();
-    document.getElementById("inventoryModal").style.display = "flex";
-  });
-  document.getElementById("cerrarInventarioBtn").addEventListener("click", () => document.getElementById("inventoryModal").style.display = "none");
-  document.getElementById("botonMisiones").addEventListener("click", () => {
-    mostrarMisiones("diarias");
-    document.getElementById("missionsModal").style.display = "flex";
-  });
-  document.getElementById("cerrarMisionesBtn").addEventListener("click", () => document.getElementById("missionsModal").style.display = "none");
-
-  // ----------- MISIONES -----------
-  const misiones = {
-    diarias: [
-      {
-        id: "abrirInventario",
-        nombre: "🎒 Abrí el Inventario",
-        requerimiento: 1,
-        recompensa: { monedas: 2 },
-        progreso: 0,
-        tipo: "evento",
-        evento: "inventario",
-        completada: false
-      }
-    ],
-    semanales: [],
-    desafio: []
-  };
-
-  function mostrarMisiones(tipo) {
-    document.querySelectorAll("#missionsModal .tab-selector button").forEach(btn => btn.classList.remove("active"));
-    document.getElementById("tab" + tipo.charAt(0).toUpperCase() + tipo.slice(1)).classList.add("active");
-
-    const contenedor = document.getElementById("misionesContenedor");
-    contenedor.innerHTML = "";
-
-    if (tipo === "semanales" || tipo === "desafio") {
-      contenedor.innerHTML = `
-        <div class="proximamente">
-          <h3>¡Próximamente!</h3>
-          <p>Se agregarán nuevas misiones ${tipo === "semanales" ? "semanales" : "de desafío"} en futuras actualizaciones.</p>
-        </div>
-      `;
-      return;
+    function cargarProgresoFirebase(callback) {
+      db.ref('jugadores/' + telegramId).once('value', snap => {
+        if (snap.exists()) {
+          const obj = snap.val();
+          coins = obj.coins || 0;
+          keys = obj.keys || 0;
+          plants = obj.plants || JSON.parse(JSON.stringify(PLANTS_DEFAULT));
+          cofresGratis = obj.cofresGratis || { oro: 0, plata: 0 };
+          lastRecolectado = obj.lastRecolectado || Date.now();
+          monedasGF = obj.monedasGF || 0;
+        } else {
+          coins = 0; keys = 0; plants = JSON.parse(JSON.stringify(PLANTS_DEFAULT));
+          cofresGratis = { oro: 1, plata: 3 }; lastRecolectado = Date.now(); monedasGF = 0;
+          guardarProgresoFirebase();
+        }
+        // Retiros
+        db.ref('retiros/' + telegramId).once('value', snap2 => {
+          historialRetiros = snap2.val() || [];
+          if (callback) callback();
+        });
+      });
     }
 
-    misiones[tipo].forEach(m => {
-      const bloque = document.createElement("div");
-      bloque.classList.add("mission");
-      let progresoTexto = `${m.progreso}/${m.requerimiento}`;
-      let btn = "";
-
-      if (m.completada) {
-        progresoTexto = "✔️ Completada";
-      } else if (m.progreso >= m.requerimiento) {
-        btn = `<button class="btn-reclamar" data-tipo="${tipo}" data-id="${m.id}">Reclamar</button>`;
-      }
-
-      bloque.innerHTML = `
-        <strong>${m.nombre}</strong>
-        <small>Recompensa: ${m.recompensa.monedas} <img src="https://i.imgur.com/n9OyA2U.png" class="moneda-icon"></small>
-        <small>Progreso: ${progresoTexto}</small>
-        ${btn}
-      `;
-      contenedor.appendChild(bloque);
-    });
-
-    contenedor.querySelectorAll(".btn-reclamar").forEach(btn => {
-      btn.addEventListener("click", () => {
-        reclamarMision(btn.getAttribute("data-tipo"), btn.getAttribute("data-id"));
+    // ---------- CARGA AUTOMÁTICA ----------
+    window.addEventListener("load", () => {
+      cargarProgresoFirebase(() => {
+        actualizarMonedas();
+        renderizarHistorialRetiros();
       });
     });
-  }
-  document.getElementById("tabDiarias").addEventListener("click", () => mostrarMisiones("diarias"));
-  document.getElementById("tabSemanales").addEventListener("click", () => mostrarMisiones("semanales"));
-  document.getElementById("tabDesafio").addEventListener("click", () => mostrarMisiones("desafio"));
 
-  function reclamarMision(tipo, id) {
-    const m = misiones[tipo].find(x => x.id === id);
-    if (m && !m.completada && m.progreso >= m.requerimiento) {
-      m.completada = true;
-      coins += m.recompensa.monedas;
-      guardarProgreso();
+    // ---------- GUARDADO AUTOMÁTICO ----------
+    setInterval(guardarProgresoFirebase, 30000);
+
+    // ---------- BALANCE MODAL ----------
+    document.getElementById("botonBalance").onclick = () => {
+      document.getElementById("balMonedas").innerText = coins;
+      document.getElementById("balGF").innerText = monedasGF;
+      document.getElementById("balKeys").innerText = keys;
+      document.getElementById("balanceModal").style.display = "flex";
+    };
+    document.getElementById("cerrarBalanceBtn").onclick = () =>
+      document.getElementById("balanceModal").style.display = "none";
+
+    // ---------- RETIROS MODAL ----------
+    document.getElementById("retirosBtn").onclick = () => {
+      document.getElementById("retiroMonedas").innerText = coins;
+      document.getElementById("retiroGF").innerText = monedasGF;
+      document.getElementById("retiroMensaje").innerText = "";
+      renderizarHistorialRetiros();
+      document.getElementById("retirosModal").style.display = "flex";
+    };
+    document.getElementById("cerrarRetirosBtn").onclick = () =>
+      document.getElementById("retirosModal").style.display = "none";
+
+    // ---------- CONVERSIÓN MONEDAS → GF ----------
+    document.getElementById("convertirAGFBtn").onclick = () => {
+      if (coins < 100) {
+        document.getElementById("retiroMensaje").innerText =
+          "No tienes suficientes monedas normales para convertir.";
+        return;
+      }
+      coins -= 100;
+      monedasGF += 1;
+      guardarProgresoFirebase();
+      document.getElementById("retiroMonedas").innerText = coins;
+      document.getElementById("retiroGF").innerText = monedasGF;
       actualizarMonedas();
-      mostrarMisiones(tipo);
-      alert(`¡Misión completada! Ganaste ${m.recompensa.monedas} monedas 🎉`);
+      document.getElementById("retiroMensaje").innerText = "¡Conversión exitosa!";
+    };
+
+    // ---------- SOLICITAR RETIRO ----------
+    document.getElementById("pedirRetiroBtn").onclick = () => {
+      if (monedasGF < 100) {
+        document.getElementById("retiroMensaje").innerText =
+          "El mínimo de retiro es 100 GF.";
+        return;
+      }
+      monedasGF -= 100;
+      const retiro = registrarRetiro(100);
+      guardarProgresoFirebase();
+      document.getElementById("retiroGF").innerText = monedasGF;
+      renderizarHistorialRetiros();
+      document.getElementById("retiroMensaje").innerText =
+        `¡Solicitud enviada! Tu ID de retiro es ${retiro.id}.`;
+    };
+
+    // ---------- REGISTRAR RETIRO ----------
+    function registrarRetiro(gfCantidad) {
+      const id =
+        "RET-" +
+        Date.now().toString(36) +
+        "-" +
+        Math.floor(Math.random() * 10000).toString(36);
+      const retiro = {
+        id,
+        gf: gfCantidad,
+        fecha: new Date().toLocaleString(),
+        estado: "pendiente",
+      };
+      historialRetiros.push(retiro);
+      db.ref('retiros/' + telegramId).set(historialRetiros);
+      return retiro;
     }
+
+    // ---------- HISTORIAL DE RETIROS ----------
+    function renderizarHistorialRetiros() {
+      const tbody = document.getElementById("tablaHistorialRetiros").querySelector("tbody");
+      tbody.innerHTML = "";
+      if (!historialRetiros.length) {
+        tbody.innerHTML =
+          "<tr><td colspan='4' style='color:#999'>Sin retiros realizados</td></tr>";
+      } else {
+        historialRetiros
+          .slice()
+          .reverse()
+          .forEach((r) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${r.id}</td>
+              <td>${r.gf}</td>
+              <td>${r.fecha}</td>
+              <td class="${r.estado}">${r.estado.charAt(0).toUpperCase() + r.estado.slice(1)}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+      }
+    }
+  // ----- LÓGICA DE COFRES -----
+  function abrirCofre(tipo) {
+    // ... lógica de apertura de cofres ...
+    // Cuando el usuario gana premio:
+    coins += premioMonedas;
+    keys += premioLlaves;
+    guardarProgresoFirebase();
+    actualizarMonedas();
+    // ...
   }
 
-  // ----------- AUXILIARES -----------
-  function actualizarMonedas() {
-    document.getElementById("coins").innerText = coins;
-    document.getElementById("perfilCoins") && (document.getElementById("perfilCoins").innerText = coins);
-    guardarProgreso();
+  // ----- LÓGICA DE PLANTAS -----
+  function comprarPlanta(idx) {
+    let planta = plants[idx];
+    if (coins < planta.valor) return;
+    coins -= planta.valor;
+    planta.cantidad += 1;
+    guardarProgresoFirebase();
+    actualizarMonedas();
+    // ...
   }
-  function actualizarLlaves() {
-    document.getElementById("keys").innerText = keys;
-    document.getElementById("userKeys") && (document.getElementById("userKeys").innerText = keys);
-    document.getElementById("perfilKeys") && (document.getElementById("perfilKeys").innerText = keys);
-    guardarProgreso();
-  }
-  actualizarMonedas();
-  actualizarLlaves();
-  mostrarInventario();
 
-  // ----------- NUEVA TIENDA -----------
-  const TIENDA_PAQUETES = [
-    { nombre:"Inicio Granjero", llaves:100, bonus:"1 cultivo épico aleatorio", precio:2.99 },
-    { nombre:"Inicio Pro", llaves:250, bonus:"3 cultivos raros aleatorios", precio:5 },
-    { nombre:"Granjero Avanzado", llaves:500, bonus:"2 épicos y 2 raros aleatorios", precio:10 },
-    { nombre:"Extraordinario", llaves:700, bonus:"1 legendaria aleatoria", precio:20 },
-    { nombre:"Mega Épico", llaves:1000, bonus:"2 épicos y 1 legendario aleatorio", precio:40 },
-    { nombre:"Granjero Legendario", llaves:2000, bonus:"Rango avanzado, beneficios VIP", precio:100 }
-  ];
-  document.getElementById("botonTienda").onclick = () => {
-    document.getElementById("newShopModal").style.display = "flex";
-    mostrarPaquetesTienda();
-  };
-  document.getElementById("cerrarTiendaNuevaBtn").onclick = () => document.getElementById("newShopModal").style.display = "none";
-  function mostrarPaquetesTienda() {
-    let html = "";
-    TIENDA_PAQUETES.forEach((p,i) => {
-      html += `
-        <div class="plant" style="flex-direction:column;align-items:flex-start;background:#fff;">
-          <b style="font-size:1.1em;color:#3777ca;">${p.nombre}</b>
-          <span>Llaves: <b style="color:#43a047">${p.llaves}</b></span>
-          <span>Incluye: <span style="color:#9b51e0">${p.bonus}</span></span>
-          <span style="color:#222">Precio: <b style="font-size:1.1em;">$${p.precio}</b></span>
-          <button style="margin:8px 0;background:#FFD600;border:none;border-radius:5px;padding:8px 24px;font-weight:bold;" onclick="comprarPaqueteTienda(${i})">Comprar</button>
-        </div>
-      `;
+  // ----- CANJEAR CÓDIGOS -----
+  document.getElementById("canjearCodigoBtn").onclick = () => {
+    let codigo = document.getElementById("inputCodigo").value.trim();
+    if (!codigo) return;
+    db.ref("codigos").child(codigo).once("value", snap => {
+      if (!snap.exists()) {
+        mostrarMensajeCodigo("Código no válido.");
+        return;
+      }
+      let info = snap.val();
+      if (info.usado) {
+        mostrarMensajeCodigo("Este código ya fue canjeado.");
+        return;
+      }
+      // Marcar como usado
+      db.ref("codigos").child(codigo).set({
+        ...info,
+        usado: true,
+        telegramId: telegramId,
+        fecha: new Date().toISOString()
+      });
+      // Otorgar premio
+      coins += info.monedas || 0;
+      keys += info.llaves || 0;
+      guardarProgresoFirebase();
+      mostrarMensajeCodigo("¡Código canjeado correctamente!");
     });
-    document.getElementById("paquetesTienda").innerHTML = html;
+  };
+
+  function mostrarMensajeCodigo(msj) {
+    document.getElementById("mensajeCodigo").innerText = msj;
   }
-  // --- ACTUALIZACIÓN: Comprar abre Telegram ---
-  window.comprarPaqueteTienda = function(i) {
-    const botUsername = "XanFarmPaybot";
-    window.open(`https://t.me/${botUsername}?start=paquete${i+1}`, "_blank");
-  };
-  // --------------------------------------------
 
-  document.getElementById("convertirMonedasBtn").onclick = () => {
-    if (coins < 100) { alert("No tienes suficientes monedas."); return; }
-    coins -= 100; keys += 10;
-    actualizarMonedas(); actualizarLlaves();
-    alert("¡Has convertido 100 monedas en 10 llaves!");
-  };
-  document.getElementById("retirosBtn").onclick = () => {
-    document.getElementById("retirosModal").style.display = "flex";
-  };
-  document.getElementById("cerrarRetirosBtn").onclick = () => document.getElementById("retirosModal").style.display = "none";
+  // ----- ACTUALIZAR MONEDAS -----
+  function actualizarMonedas() {
+    document.getElementById("monedasSpan").innerText = coins;
+    document.getElementById("llavesSpan").innerText = keys;
+    // ----- TIENDA -----
+function mostrarTienda() {
+  const lista = document.getElementById("listaTienda");
+  lista.innerHTML = "";
+  plants.forEach((planta, idx) => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <img src="${planta.img}" width="32" height="32">
+      <span>${planta.nombre} (${planta.rareza})</span>
+      <span>Valor: ${planta.valor} monedas</span>
+      <span>Cantidad: ${planta.cantidad}</span>
+      <button onclick="comprarPlanta(${idx})">Comprar</button>
+    `;
+    lista.appendChild(li);
+  });
+  document.getElementById("tiendaModal").style.display = "flex";
+}
+document.getElementById("abrirTiendaBtn").onclick = mostrarTienda;
+document.getElementById("cerrarTiendaBtn").onclick = () => {
+  document.getElementById("tiendaModal").style.display = "none";
+};
 
-  // ----------- OPCIONES -----------
-  document.getElementById("botonOpciones").onclick = () => {
-    document.getElementById("optionsModal").style.display = "flex";
-  };
-  document.getElementById("cerrarOpcionesBtn").onclick = () => document.getElementById("optionsModal").style.display = "none";
-  document.getElementById("borrarProgresoBtn").onclick = () => {
-    if (confirm("¿Seguro que deseas borrar TODO tu progreso?")) {
-      localStorage.clear();
-      location.reload();
-    }
-  };
-  document.getElementById("ajustarBrilloBtn").onclick = () => {
-    const body = document.body;
-    body.style.filter = body.style.filter === "brightness(0.7)" ? "none" : "brightness(0.7)";
-  };
-  let musicaActiva = true;
-  document.getElementById("musicaBtn").onclick = function() {
-    musicaActiva = !musicaActiva;
-    this.innerText = musicaActiva ? "Desactivar Música" : "Activar Música";
-    // Aquí puedes pausar o reproducir la música si tienes audio de fondo
-  };
-  document.getElementById("billeteraBtn").onclick = () => alert("Función de billetera próximamente.");
-  document.getElementById("politicasLink").onclick = function(e) {
-    e.preventDefault();
-    document.getElementById("optionsModal").style.display = "none";
-    document.getElementById("politicasModal").style.display = "flex";
-  };
-  document.getElementById("cerrarPoliticasBtn").onclick = () => document.getElementById("politicasModal").style.display = "none";
+function comprarPlanta(idx) {
+  const planta = plants[idx];
+  if (coins < planta.valor) {
+    alert("No tienes suficientes monedas.");
+    return;
+  }
+  coins -= planta.valor;
+  planta.cantidad += 1;
+  guardarProgresoFirebase();
+  actualizarMonedas();
+  mostrarTienda();
+}
 
-  // ========== SISTEMA DE CANJE DE CÓDIGOS ==========
-  const codigosValidos = {
-  // Paquete 1: Inicio Granjero
-  "XAN-1A1B-PAQ1": { paquete: 0, descripcion: "Inicio Granjero: 100 llaves + 1 cultivo épico" },
-  "XAN-2A2B-PAQ1": { paquete: 0, descripcion: "Inicio Granjero: 100 llaves + 1 cultivo épico" },
-  "XAN-3A3B-PAQ1": { paquete: 0, descripcion: "Inicio Granjero: 100 llaves + 1 cultivo épico" },
-  "XAN-4A4B-PAQ1": { paquete: 0, descripcion: "Inicio Granjero: 100 llaves + 1 cultivo épico" },
-  "XAN-5A5B-PAQ1": { paquete: 0, descripcion: "Inicio Granjero: 100 llaves + 1 cultivo épico" },
-  "XAN-6A6B-PAQ1": { paquete: 0, descripcion: "Inicio Granjero: 100 llaves + 1 cultivo épico" },
+// ----- LÓGICA DE PREMIO DIARIO -----
+function otorgarPremioDiario() {
+  const ahora = Date.now();
+  // Permitir premio diario cada 24 horas
+  if (ahora - lastRecolectado < 24 * 60 * 60 * 1000) {
+    alert("Ya reclamaste el premio diario. Espera hasta mañana.");
+    return;
+  }
+  const premio = Math.floor(Math.random() * 50) + 50; // 50-99 monedas
+  coins += premio;
+  lastRecolectado = ahora;
+  guardarProgresoFirebase();
+  actualizarMonedas();
+  alert(`¡Has recibido tu premio diario de ${premio} monedas!`);
+}
+document.getElementById("premioDiarioBtn").onclick = otorgarPremioDiario;
 
-  // Paquete 2: Inicio Pro
-  "XAN-1C1D-PAQ2": { paquete: 1, descripcion: "Inicio Pro: 250 llaves + 3 raros" },
-  "XAN-2C2D-PAQ2": { paquete: 1, descripcion: "Inicio Pro: 250 llaves + 3 raros" },
-  "XAN-3C3D-PAQ2": { paquete: 1, descripcion: "Inicio Pro: 250 llaves + 3 raros" },
-  "XAN-4C4D-PAQ2": { paquete: 1, descripcion: "Inicio Pro: 250 llaves + 3 raros" },
-  "XAN-5C5D-PAQ2": { paquete: 1, descripcion: "Inicio Pro: 250 llaves + 3 raros" },
-  "XAN-6C6D-PAQ2": { paquete: 1, descripcion: "Inicio Pro: 250 llaves + 3 raros" },
+// ----- LÓGICA DE COFRE GRATIS -----
+function abrirCofreGratis(tipo) {
+  if (tipo === "oro" && cofresGratis.oro > 0) {
+    cofresGratis.oro -= 1;
+    coins += 500;
+    keys += 5;
+    guardarProgresoFirebase();
+    actualizarMonedas();
+    alert("¡Cofre de oro abierto! +500 monedas y +5 llaves.");
+  } else if (tipo === "plata" && cofresGratis.plata > 0) {
+    cofresGratis.plata -= 1;
+    coins += 200;
+    keys += 2;
+    guardarProgresoFirebase();
+    actualizarMonedas();
+    alert("¡Cofre de plata abierto! +200 monedas y +2 llaves.");
+  } else {
+    alert("No tienes cofres gratis de ese tipo.");
+  }
+}
 
-  // Paquete 3: Granjero Avanzado
-  "XAN-1E1F-PAQ3": { paquete: 2, descripcion: "Granjero Avanzado: 500 llaves + 2 épicos y 2 raros" },
-  "XAN-2E2F-PAQ3": { paquete: 2, descripcion: "Granjero Avanzado: 500 llaves + 2 épicos y 2 raros" },
-  "XAN-3E3F-PAQ3": { paquete: 2, descripcion: "Granjero Avanzado: 500 llaves + 2 épicos y 2 raros" },
-  "XAN-4E4F-PAQ3": { paquete: 2, descripcion: "Granjero Avanzado: 500 llaves + 2 épicos y 2 raros" },
-  "XAN-5E5F-PAQ3": { paquete: 2, descripcion: "Granjero Avanzado: 500 llaves + 2 épicos y 2 raros" },
-  "XAN-6E6F-PAQ3": { paquete: 2, descripcion: "Granjero Avanzado: 500 llaves + 2 épicos y 2 raros" },
+// ----- RESTO DE FUNCIONES DEL JUEGO -----
 
-  // Paquete 4: Extraordinario
-  "XAN-1G1H-PAQ4": { paquete: 3, descripcion: "Extraordinario: 700 llaves + 1 legendaria aleatoria" },
-  "XAN-2G2H-PAQ4": { paquete: 3, descripcion: "Extraordinario: 700 llaves + 1 legendaria aleatoria" },
-  "XAN-3G3H-PAQ4": { paquete: 3, descripcion: "Extraordinario: 700 llaves + 1 legendaria aleatoria" },
-  "XAN-4G4H-PAQ4": { paquete: 3, descripcion: "Extraordinario: 700 llaves + 1 legendaria aleatoria" },
-  "XAN-5G5H-PAQ4": { paquete: 3, descripcion: "Extraordinario: 700 llaves + 1 legendaria aleatoria" },
-  "XAN-6G6H-PAQ4": { paquete: 3, descripcion: "Extraordinario: 700 llaves + 1 legendaria aleatoria" },
+// Ejemplo de selector de cofres en pantalla principal
+document.getElementById("abrirCofreOroBtn").onclick = () => abrirCofreGratis("oro");
+document.getElementById("abrirCofrePlataBtn").onclick = () => abrirCofreGratis("plata");
 
-  // Paquete 5: Mega Épico
-  "XAN-1I1J-PAQ5": { paquete: 4, descripcion: "Mega Épico: 1000 llaves + 2 épicos y 1 legendario aleatorio" },
-  "XAN-2I2J-PAQ5": { paquete: 4, descripcion: "Mega Épico: 1000 llaves + 2 épicos y 1 legendario aleatorio" },
-  "XAN-3I3J-PAQ5": { paquete: 4, descripcion: "Mega Épico: 1000 llaves + 2 épicos y 1 legendario aleatorio" },
-  "XAN-4I4J-PAQ5": { paquete: 4, descripcion: "Mega Épico: 1000 llaves + 2 épicos y 1 legendario aleatorio" },
-  "XAN-5I5J-PAQ5": { paquete: 4, descripcion: "Mega Épico: 1000 llaves + 2 épicos y 1 legendario aleatorio" },
-  "XAN-6I6J-PAQ5": { paquete: 4, descripcion: "Mega Épico: 1000 llaves + 2 épicos y 1 legendario aleatorio" },
+// Plantar y cosechar plantas (ejemplo)
+function plantar(idx) {
+  if (plants[idx].cantidad < 1) {
+    alert("No tienes esa planta para sembrar.");
+    return;
+  }
+  // Simula cosecha instantánea
+  const recompensa = Math.floor(plants[idx].valor * 0.5);
+  coins += recompensa;
+  plants[idx].cantidad -= 1;
+  guardarProgresoFirebase();
+  actualizarMonedas();
+  alert(`¡Cosechaste ${plants[idx].nombre} y ganaste ${recompensa} monedas!`);
+}
 
-  // Paquete 6: Granjero Legendario
-  "XAN-1K1L-PAQ6": { paquete: 5, descripcion: "Granjero Legendario: 2000 llaves + Rango avanzado, beneficios VIP" },
-  "XAN-2K2L-PAQ6": { paquete: 5, descripcion: "Granjero Legendario: 2000 llaves + Rango avanzado, beneficios VIP" },
-  "XAN-3K3L-PAQ6": { paquete: 5, descripcion: "Granjero Legendario: 2000 llaves + Rango avanzado, beneficios VIP" },
-  "XAN-4K4L-PAQ6": { paquete: 5, descripcion: "Granjero Legendario: 2000 llaves + Rango avanzado, beneficios VIP" },
-  "XAN-5K5L-PAQ6": { paquete: 5, descripcion: "Granjero Legendario: 2000 llaves + Rango avanzado, beneficios VIP" },
-  "XAN-6K6L-PAQ6": { paquete: 5, descripcion: "Granjero Legendario: 2000 llaves + Rango avanzado, beneficios VIP" }
-  };
-  window.canjearCodigo = function() {
-    const input = document.getElementById("codigoInput").value.trim();
-    if (!input) { alert("Ingresa un código."); return; }
-    const usados = JSON.parse(localStorage.getItem("xanfarm-codigosUsados") || "[]");
-    if (usados.includes(input)) {
-      alert("Ya usaste este código.");
-      return;
-    }
-    if (codigosValidos[input]) {
-      const paquete = codigosValidos[input].paquete;
-      alert("¡Código válido! Has recibido: " + codigosValidos[input].descripcion);
-      // Entrega según el paquete
-      const premio = TIENDA_PAQUETES[paquete];
-      keys += premio.llaves;
-      // Puedes agregar lógica para los cultivos de bonus aquí
-      actualizarLlaves();
-      usados.push(input);
-      localStorage.setItem("xanfarm-codigosUsados", JSON.stringify(usados));
-      document.getElementById("codigoInput").value = "";
-    } else {
-      alert("Código inválido.");
-    }
-  };
-
+// Asocia botones de plantar (si tienes en tu HTML)
+plants.forEach((_, idx) => {
+  const btn = document.getElementById(`plantarBtn${idx}`);
+  if (btn) btn.onclick = () => plantar(idx);
 });
-</script>
-  <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyDoEwGkNnjJY6kIvISs1zgiDgU3MCrkZno",
-    authDomain: "xanfarm-web.firebaseapp.com",
-    databaseURL: "https://xanfarm-web-default-rtdb.firebaseio.com",
-    projectId: "xanfarm-web",
-    storageBucket: "xanfarm-web.appspot.com",
-    messagingSenderId: "703765140128",
-    appId: "1:703765140128:web:58f1816df69936bc28efc5"
-  };
+// ----- GENERALES -----
+function cerrarModales() {
+  document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
+}
+document.querySelectorAll(".cerrarBtn").forEach(btn => btn.onclick = cerrarModales);
 
-  firebase.initializeApp(firebaseConfig);
-</script>
-
+  </script>
 </body>
 </html>
